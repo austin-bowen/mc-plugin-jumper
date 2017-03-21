@@ -1,0 +1,9 @@
+name: Jumper
+version: 1.2
+author: Austin Bowen <bowens.minecraft@gmail.com>
+main: info.saltyhash.jumper.Jumper
+commands:
+permissions:
+  jumper.use:
+    description: Allows the player to use Jumper.
+    default: true
