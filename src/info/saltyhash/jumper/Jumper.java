@@ -1,7 +1,6 @@
 package info.saltyhash.jumper;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -16,6 +15,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.BlockIterator;
 import org.bukkit.util.Vector;
@@ -25,20 +25,17 @@ import org.bukkit.util.Vector;
  */
 public class Jumper extends JavaPlugin implements Listener {
     private final Set<Material> blockMaterialsToIgnore = new HashSet<>(Arrays.asList(
-        Material.AIR,              Material.CARPET,     Material.DOUBLE_PLANT,
-        Material.FIRE,             Material.LONG_GRASS, Material.SAPLING,
-        Material.SUGAR_CANE_BLOCK, Material.SNOW,       Material.STATIONARY_WATER,
-        Material.TORCH,            Material.VINE,       Material.WATER
+            Material.AIR,              Material.CARPET,           Material.DOUBLE_PLANT,
+            Material.FIRE,             Material.LADDER,           Material.LONG_GRASS,
+            Material.SAPLING,          Material.SUGAR_CANE_BLOCK, Material.SNOW,
+            Material.STATIONARY_WATER, Material.TORCH,            Material.VINE,
+            Material.WATER
     ));
     
-    private int cooldownMS;
-    private HashMap<Player, Long> playersToLastJumpTimeMS = new HashMap<>();
     private int viewDistance;
     
     @Override
     public void onEnable() {
-        this.cooldownMS = 500;  // Move to config file eventually?
-        this.playersToLastJumpTimeMS.clear();
         this.viewDistance = (int)Math.round(
                 Math.sqrt(3)*16*this.getServer().getViewDistance());
         this.getServer().getPluginManager().registerEvents(this, this);
@@ -53,11 +50,14 @@ public class Jumper extends JavaPlugin implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
-    
+        
         // Player must have permission
         if (!player.hasPermission("jumper.use")) return;
-    
+        
         // Checks are in Frequenty Failed First order
+        
+        // Event must be for HAND (not OFF_HAND)
+        if (event.getHand() != EquipmentSlot.HAND) return;
         
         // Player must be jumping
         if (player.isOnGround()) return;
@@ -70,13 +70,6 @@ public class Jumper extends JavaPlugin implements Listener {
         
         // Player must not be flying
         if (player.isFlying()) return;
-        
-        // Cannot jump before cooldown time is up
-        Long lastJumpTimeMS = this.playersToLastJumpTimeMS.get(player);
-        if (lastJumpTimeMS != null) {
-            long dt = System.currentTimeMillis()-lastJumpTimeMS;
-            if (dt < this.cooldownMS) return;
-        }
         
         // Determine the destination by finding the block at the crosshairs
         Location dest = null;
@@ -128,8 +121,6 @@ public class Jumper extends JavaPlugin implements Listener {
         // Play teleport sound at the new location
         playerLocation.getWorld().playSound(
                 playerLocation, Sound.ENTITY_ENDERMEN_TELEPORT, 1.0f, 1.0f);
-        // Set the player's last jump time to now
-        this.playersToLastJumpTimeMS.put(player, System.currentTimeMillis());
         
         // This will prevent things like snowballs from being thrown
         event.setCancelled(true);
