@@ -65,7 +65,7 @@ public class Jumper extends JavaPlugin implements Listener {
         
         // Player must not be holding a bow
         if (player.getInventory().getItemInMainHand().getType() == Material.BOW ||
-                player.getInventory().getItemInOffHand().getType() == Material.BOW) return;
+            player.getInventory().getItemInOffHand().getType()  == Material.BOW) return;
         
         // Player must not be riding anything
         if (player.isInsideVehicle()) return;
