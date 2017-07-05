@@ -1,7 +1,7 @@
 name: Jumper
-version: 1.2
-author: Austin Bowen <bowens.minecraft@gmail.com>
-main: info.saltyhash.jumper.Jumper
+version: 1.3
+author: Austin Bowen <austin.bowen.314@gmail.com>
+main: me.saltyhash.jumper.Jumper
 commands:
 permissions:
   jumper.use:
