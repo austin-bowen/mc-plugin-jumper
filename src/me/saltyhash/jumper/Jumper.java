@@ -7,6 +7,7 @@ import java.util.Set;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -30,19 +31,16 @@ public class Jumper extends JavaPlugin implements Listener {
             Material.WATER
     ));
     
-    private int viewDistance;
-    
     @Override
     public void onEnable() {
-        this.viewDistance = (int)Math.round(
-                Math.sqrt(3)*16*this.getServer().getViewDistance());
-        this.getServer().getPluginManager().registerEvents(this, this);
-        this.getLogger().info("Enabled.");
+        saveDefaultConfig();
+        getServer().getPluginManager().registerEvents(this, this);
+        getLogger().info("Enabled.");
     }
     
     @Override
     public void onDisable() {
-        this.getLogger().info("Disabled.");
+        getLogger().info("Disabled.");
     }
     
     @EventHandler(priority = EventPriority.LOWEST)
@@ -52,7 +50,7 @@ public class Jumper extends JavaPlugin implements Listener {
         // Player must have permission
         if (!player.hasPermission("jumper.use")) return;
         
-        // Checks are in Frequently Failed First order
+        /* Checks are in Frequently Failed First order */
         
         // Event must be for HAND (not OFF_HAND)
         if (event.getHand() != EquipmentSlot.HAND) return;
@@ -62,6 +60,15 @@ public class Jumper extends JavaPlugin implements Listener {
         
         // Player must be right-clicking air
         if (event.getAction() != Action.RIGHT_CLICK_AIR) return;
+        
+        // Player must have enough health
+        double playerHealthPercent = 100.0 * player.getHealth() /
+                player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+        if (playerHealthPercent < getConfigMinHealth()) return;
+        
+        // Player must not be too hungry
+        double playerFoodPercent = 100.0 * (double)player.getFoodLevel() / 20.0;
+        if (playerFoodPercent < getConfigMinFood()) return;
         
         // Player must not be holding a bow
         if (player.getInventory().getItemInMainHand().getType() == Material.BOW ||
@@ -73,58 +80,107 @@ public class Jumper extends JavaPlugin implements Listener {
         // Player must not be flying
         if (player.isFlying()) return;
         
+        // Get min and max distances
+        int minDistance = getConfigDistanceMin();
+        int maxDistance = getConfigDistanceMax();
+        if (minDistance > maxDistance) return;      // This would be dumb but okay
+        
         // Determine the destination by finding the block at the crosshairs
-        Location dest = null;
-        BlockIterator bi = new BlockIterator(
-                player.getEyeLocation(), 0, this.viewDistance);
+        Location newLocation = null;
+        BlockIterator bi = new BlockIterator(player.getEyeLocation(), 0, maxDistance);
         Block nextBlock, prevBlock = bi.next();
         while (bi.hasNext()) {
             nextBlock = bi.next();
+            
             // Reached the selected block?
-            //if (nextBlock.getType() != Material.AIR) {
-            if (!this.blockMaterialsToIgnore.contains(nextBlock.getType())) {
-                
+            if (!blockMaterialsToIgnore.contains(nextBlock.getType())) {
                 // Get the two blocks above the selected block
                 Location l  = nextBlock.getLocation();
                 Block    b0 = l.add(0.0, 1.0, 0.0).getBlock();
                 Block    b1 = l.add(0.0, 1.0, 0.0).getBlock();
                 
+                newLocation = player.getLocation();
+                
                 // If two blocks above selected block are clear,
                 // then teleport ON TOP of the selected block
-                if (this.blockMaterialsToIgnore.contains(b0.getType())
-                        && this.blockMaterialsToIgnore.contains(b1.getType()))
-                    dest = nextBlock.getLocation().add(0.5, 1.1, 0.5);
+                if (blockMaterialsToIgnore.contains(b0.getType())
+                        && blockMaterialsToIgnore.contains(b1.getType())) {
+                    l = nextBlock.getLocation();
+                    newLocation.setX(l.getX() + 0.5);
+                    newLocation.setY(l.getY() + 1.1);
+                    newLocation.setZ(l.getZ() + 0.5);
+                }
                 
                 // Otherwise, teleport IN FRONT of the selected block
-                else
-                    dest = prevBlock.getLocation().add(0.5, 0.0, 0.5);
+                else {
+                    l = prevBlock.getLocation();
+                    newLocation.setX(l.getX() + 0.5);
+                    newLocation.setY(l.getY());
+                    newLocation.setZ(l.getZ() + 0.5);
+                }
                 
                 break;
             }
             prevBlock = nextBlock;
         }
-        if (dest == null) return;
+        if (newLocation == null) return;
+        Location oldLocation = player.getLocation();
+        if (oldLocation.distance(newLocation) < minDistance) return;
         
         /* Teleport the player to the selected location */
-        Location playerLocation = player.getLocation();
+        
         // Play teleport sound at current location
-        playerLocation.getWorld().playSound(
-                playerLocation, Sound.ENTITY_ENDERMEN_TELEPORT, 1.0f, 1.0f);
-        // Change the player location coordinates to the destination coordinates
-        playerLocation.setX(dest.getX());
-        playerLocation.setY(dest.getY());
-        playerLocation.setZ(dest.getZ());
+        if (getConfigSound()) oldLocation.getWorld().playSound(
+                oldLocation, Sound.ENTITY_ENDERMEN_TELEPORT, 1.0f, 1.0f);
+        
         // Get the player's current velocity
         Vector playerVelocity = player.getVelocity();
+        
         // Teleport the player to the new location
-        player.teleport(playerLocation, PlayerTeleportEvent.TeleportCause.PLUGIN);
+        player.teleport(newLocation, PlayerTeleportEvent.TeleportCause.PLUGIN);
+        
         // Set the player's velocity to that before the teleport
         player.setVelocity(playerVelocity);
+        
         // Play teleport sound at the new location
-        playerLocation.getWorld().playSound(
-                playerLocation, Sound.ENTITY_ENDERMEN_TELEPORT, 1.0f, 1.0f);
+        if (getConfigSound()) newLocation.getWorld().playSound(
+                newLocation, Sound.ENTITY_ENDERMEN_TELEPORT, 1.0f, 1.0f);
+        
+        // Increase the player's exhaustion
+        double exhaustion = getConfigExhaustionPerMeter() * oldLocation.distance(newLocation);
+        if (exhaustion > 0.0) player.setExhaustion(player.getExhaustion() + (float)exhaustion);
         
         // This will prevent things like snowballs from being thrown
         event.setCancelled(true);
+    }
+    
+    /** Returns the max teleportation distance [0, server view distance]. */
+    private int getConfigDistanceMax() {
+        int max = Math.max(getConfig().getInt("distance.max"), 0);
+        int serverViewDistance = 16 * getServer().getViewDistance();
+        return (max > 0) ? Math.min(max, serverViewDistance) : serverViewDistance;
+    }
+    
+    /** Returns the min teleportation distance [0, inf]. */
+    private int getConfigDistanceMin() {
+        return Math.max(getConfig().getInt("distance.min"), 0);
+    }
+    
+    private double getConfigExhaustionPerMeter() {
+        return Math.max(0.0, getConfig().getDouble("exhaustion_per_meter"));
+    }
+    
+    /** Min health; should be [0, 100], but could technically be outside this range. */
+    private double getConfigMinHealth() {
+        return getConfig().getDouble("min_health");
+    }
+    
+    /** Min food; should be [0, 100], but could technically be outside this range. */
+    private int getConfigMinFood() {
+        return getConfig().getInt("min_food");
+    }
+    
+    private boolean getConfigSound() {
+        return getConfig().getBoolean("sound");
     }
 }
