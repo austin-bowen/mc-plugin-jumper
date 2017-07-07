@@ -3,7 +3,22 @@ version: 1.3
 author: Austin Bowen <austin.bowen.314@gmail.com>
 main: me.saltyhash.jumper.Jumper
 commands:
+  jumper:
+    description: Display instructions on how to use Jumper
+    usage: /<command>
+  jumper reload:
+    description: Reload config file
+    usage: /<command>
+  jumper version:
+    description: Display the plugin version and authors
+    usage: /<command>
 permissions:
+  jumper.reload:
+    description: Allow using the reload subcommand
+    default: op
   jumper.use:
-    description: Allows the player to use Jumper.
+    description: Allow the player to teleport
     default: true
+  jumper.version:
+    description: Allow using the version subcommand
+    default: op

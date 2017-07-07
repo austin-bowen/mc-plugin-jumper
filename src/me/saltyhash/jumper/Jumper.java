@@ -2,13 +2,17 @@ package me.saltyhash.jumper;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -17,6 +21,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.BlockIterator;
 import org.bukkit.util.Vector;
@@ -41,6 +46,68 @@ public class Jumper extends JavaPlugin implements Listener {
     @Override
     public void onDisable() {
         getLogger().info("Disabled.");
+    }
+    
+    @Override
+    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+        // Command:  /jumper [...]
+        if (cmd.getName().equalsIgnoreCase("jumper")) {
+            // Command:  /jumper
+            if (args.length == 0) {
+                sender.sendMessage("Jumper allows you to teleport to wherever you are looking, "+
+                        "simply by jumping and right-clicking while in the air.");
+                return true;
+            }
+            
+            // Command:  /jumper reload
+            else if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
+                // Sender does not have permission to reload the config?
+                if (!sender.hasPermission("jumper.reload")) {
+                    sender.sendMessage(ChatColor.RED +
+                            "You do not have permission to execute that command");
+                    return true;
+                }
+                
+                // Reload the config
+                reloadConfig();
+                sender.sendMessage("Reloaded Jumper config file");
+                getLogger().info(sender.getName()+" reloaded config file");
+                return true;
+            }
+            
+            // Command:  /jumper version
+            else if (args.length == 1 && args[0].equalsIgnoreCase("version")) {
+                // Sender does not have permission to display version information?
+                if (!sender.hasPermission("jumper.version")) {
+                    sender.sendMessage(ChatColor.RED +
+                            "You do not have permission to execute that command");
+                    return true;
+                }
+                
+                // Build and send message
+                PluginDescriptionFile pdf = getDescription();
+                List<String> authors = pdf.getAuthors();
+                StringBuilder msg = new StringBuilder();
+                msg.append(pdf.getFullName());
+                if (authors.size() == 1) {
+                    msg.append("\nAuthor: ").append(authors.get(0));
+                } else if (authors.size() > 1) {
+                    msg.append("\nAuthors:");
+                    for (String author : authors)
+                        msg.append("\n    ").append(author);
+                }
+                sender.sendMessage(msg.toString());
+                return true;
+            }
+            
+            else {
+                sender.sendMessage(ChatColor.RED +
+                        "Unrecognized Jumper command; type '/help jumper' for a list of commands.");
+                return true;
+            }
+        }
+        
+        return false;
     }
     
     @EventHandler(priority = EventPriority.LOWEST)
