@@ -19,7 +19,7 @@ Jumper is a Minecraft server plugin for CraftBukkit (and others) which allows pl
 1. Download the latest Jumper-x.y.jar file.
 1. Remove any old Jumper jar file from your server's "plugins" directory.
 1. Move the new jar file into your server's "plugins" directory.
-1. If your server is not running, start it up.  If it *is* running, either reload the plugins with the "/reload" command, or restart the server.
+1. If your server is not running, start it up.  If it *is* running, restart the server **(/reload is not recommended)**.
 1. You can now start using Jumper!
 
 ## Permissions
