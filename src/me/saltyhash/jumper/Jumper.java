@@ -40,12 +40,11 @@ public class Jumper extends JavaPlugin implements Listener {
     public void onEnable() {
         saveDefaultConfig();
         getServer().getPluginManager().registerEvents(this, this);
-        getLogger().info("Enabled.");
     }
     
     @Override
     public void onDisable() {
-        getLogger().info("Disabled.");
+        
     }
     
     @Override
