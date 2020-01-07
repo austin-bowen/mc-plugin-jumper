@@ -32,7 +32,7 @@ import java.util.Set;
  * Bukkit plugin that allows players to teleport to line-of-sight destinations.
  */
 public class Jumper extends JavaPlugin implements Listener {
-    private final Set<Material> blockMaterialsToIgnore = new HashSet<>(Arrays.asList(
+    private static final Set<Material> BLOCK_MATERIALS_TO_IGNORE = new HashSet<>(Arrays.asList(
             Material.AIR,
 //            Material.CARPET,
             Material.FIRE,
@@ -169,7 +169,7 @@ public class Jumper extends JavaPlugin implements Listener {
             nextBlock = bi.next();
 
             // Reached the selected block?
-            if (!blockMaterialsToIgnore.contains(nextBlock.getType())) {
+            if (!ignoreBlock(nextBlock)) {
                 // Get the two blocks above the selected block
                 Location l = nextBlock.getLocation();
                 final Block b0 = l.add(0.0, 1.0, 0.0).getBlock();
@@ -177,10 +177,8 @@ public class Jumper extends JavaPlugin implements Listener {
 
                 newLocation = player.getLocation();
 
-                // If two blocks above selected block are clear,
-                // then teleport ON TOP of the selected block
-                if (blockMaterialsToIgnore.contains(b0.getType())
-                        && blockMaterialsToIgnore.contains(b1.getType())) {
+                // If two blocks above selected block are clear, then teleport ON TOP of the selected block
+                if (ignoreBlock(b0) && ignoreBlock(b1)) {
                     l = nextBlock.getLocation();
                     newLocation.setX(l.getX() + 0.5);
                     newLocation.setY(l.getY() + 1.1);
@@ -228,15 +226,6 @@ public class Jumper extends JavaPlugin implements Listener {
         event.setCancelled(true);
     }
 
-    private void playTeleportSound(final Location location) {
-        if (!getConfigSound()) return;
-
-        final World world = location.getWorld();
-        if (world == null) return;
-
-        world.playSound(location, Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
-    }
-
     /**
      * Returns the max teleportation distance [0, server view distance].
      */
@@ -273,5 +262,18 @@ public class Jumper extends JavaPlugin implements Listener {
 
     private boolean getConfigSound() {
         return getConfig().getBoolean("sound");
+    }
+
+    private static boolean ignoreBlock(final Block block) {
+        return BLOCK_MATERIALS_TO_IGNORE.contains(block.getType());
+    }
+
+    private void playTeleportSound(final Location location) {
+        if (!getConfigSound()) return;
+
+        final World world = location.getWorld();
+        if (world == null) return;
+
+        world.playSound(location, Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
     }
 }
