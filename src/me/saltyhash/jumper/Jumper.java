@@ -46,6 +46,8 @@ public class Jumper extends JavaPlugin implements Listener {
             Material.WATER
     ));
 
+    private static final double MAX_PLAYER_FOOD_LEVEL = 20.0;
+
     @Override
     public void onEnable() {
         saveDefaultConfig();
@@ -143,7 +145,7 @@ public class Jumper extends JavaPlugin implements Listener {
         if (playerHealthPercent < getConfigMinHealth()) return;
 
         // Player must not be too hungry
-        final double playerFoodPercent = 100.0 * (double) player.getFoodLevel() / 20.0;
+        final double playerFoodPercent = 100.0 * (double) player.getFoodLevel() / MAX_PLAYER_FOOD_LEVEL;
         if (playerFoodPercent < getConfigMinFood()) return;
 
         // Player must not be holding a bow
@@ -204,7 +206,7 @@ public class Jumper extends JavaPlugin implements Listener {
         /* Teleport the player to the selected location */
 
         // Play teleport sound at current location
-        playTeleportSound(newLocation);
+        playTeleportSound(oldLocation);
 
         // Get the player's current velocity
         final Vector playerVelocity = player.getVelocity();
