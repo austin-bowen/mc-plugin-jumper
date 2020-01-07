@@ -4,7 +4,9 @@ import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
+import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -57,7 +59,7 @@ public class Jumper extends JavaPlugin implements Listener {
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+    public boolean onCommand(final CommandSender sender, final Command cmd, final String label, final String[] args) {
         // Command:  /jumper [...]
         if (cmd.getName().equalsIgnoreCase("jumper")) {
             // Command:  /jumper
@@ -93,15 +95,15 @@ public class Jumper extends JavaPlugin implements Listener {
                 }
 
                 // Build and send message
-                PluginDescriptionFile pdf = getDescription();
-                List<String> authors = pdf.getAuthors();
-                StringBuilder msg = new StringBuilder();
+                final PluginDescriptionFile pdf = getDescription();
+                final List<String> authors = pdf.getAuthors();
+                final StringBuilder msg = new StringBuilder();
                 msg.append(pdf.getFullName());
                 if (authors.size() == 1) {
                     msg.append("\nAuthor: ").append(authors.get(0));
                 } else if (authors.size() > 1) {
                     msg.append("\nAuthors:");
-                    for (String author : authors)
+                    for (final String author : authors)
                         msg.append("\n    ").append(author);
                 }
                 sender.sendMessage(msg.toString());
@@ -117,8 +119,8 @@ public class Jumper extends JavaPlugin implements Listener {
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
-    public void onPlayerInteract(PlayerInteractEvent event) {
-        Player player = event.getPlayer();
+    public void onPlayerInteract(final PlayerInteractEvent event) {
+        final Player player = event.getPlayer();
 
         // Player must have permission
         if (!player.hasPermission("jumper.use")) return;
@@ -135,13 +137,13 @@ public class Jumper extends JavaPlugin implements Listener {
         if (event.getAction() != Action.RIGHT_CLICK_AIR) return;
 
         // Player must have enough health
-
-        double playerHealthPercent = 100.0 * player.getHealth() /
-                player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+        final AttributeInstance maxHealth = player.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+        final double playerHealthPercent =
+                maxHealth != null ? 100.0 * player.getHealth() / maxHealth.getValue() : 100.0;
         if (playerHealthPercent < getConfigMinHealth()) return;
 
         // Player must not be too hungry
-        double playerFoodPercent = 100.0 * (double) player.getFoodLevel() / 20.0;
+        final double playerFoodPercent = 100.0 * (double) player.getFoodLevel() / 20.0;
         if (playerFoodPercent < getConfigMinFood()) return;
 
         // Player must not be holding a bow
@@ -155,13 +157,13 @@ public class Jumper extends JavaPlugin implements Listener {
         if (player.isFlying()) return;
 
         // Get min and max distances
-        int minDistance = getConfigDistanceMin();
-        int maxDistance = getConfigDistanceMax();
+        final int minDistance = getConfigDistanceMin();
+        final int maxDistance = getConfigDistanceMax();
         if (minDistance > maxDistance) return;      // This would be dumb but okay
 
         // Determine the destination by finding the block at the crosshairs
         Location newLocation = null;
-        BlockIterator bi = new BlockIterator(player.getEyeLocation(), 0, maxDistance);
+        final BlockIterator bi = new BlockIterator(player.getEyeLocation(), 0, maxDistance);
         Block nextBlock, prevBlock = bi.next();
         while (bi.hasNext()) {
             nextBlock = bi.next();
@@ -170,8 +172,8 @@ public class Jumper extends JavaPlugin implements Listener {
             if (!blockMaterialsToIgnore.contains(nextBlock.getType())) {
                 // Get the two blocks above the selected block
                 Location l = nextBlock.getLocation();
-                Block b0 = l.add(0.0, 1.0, 0.0).getBlock();
-                Block b1 = l.add(0.0, 1.0, 0.0).getBlock();
+                final Block b0 = l.add(0.0, 1.0, 0.0).getBlock();
+                final Block b1 = l.add(0.0, 1.0, 0.0).getBlock();
 
                 newLocation = player.getLocation();
 
@@ -182,7 +184,6 @@ public class Jumper extends JavaPlugin implements Listener {
                     l = nextBlock.getLocation();
                     newLocation.setX(l.getX() + 0.5);
                     newLocation.setY(l.getY() + 1.1);
-                    newLocation.setZ(l.getZ() + 0.5);
                 }
 
                 // Otherwise, teleport IN FRONT of the selected block
@@ -190,25 +191,25 @@ public class Jumper extends JavaPlugin implements Listener {
                     l = prevBlock.getLocation();
                     newLocation.setX(l.getX() + 0.5);
                     newLocation.setY(l.getY());
-                    newLocation.setZ(l.getZ() + 0.5);
                 }
+
+                newLocation.setZ(l.getZ() + 0.5);
 
                 break;
             }
             prevBlock = nextBlock;
         }
         if (newLocation == null) return;
-        Location oldLocation = player.getLocation();
+        final Location oldLocation = player.getLocation();
         if (oldLocation.distance(newLocation) < minDistance) return;
 
         /* Teleport the player to the selected location */
 
         // Play teleport sound at current location
-        if (getConfigSound()) oldLocation.getWorld().playSound(
-                oldLocation, Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+        playTeleportSound(newLocation);
 
         // Get the player's current velocity
-        Vector playerVelocity = player.getVelocity();
+        final Vector playerVelocity = player.getVelocity();
 
         // Teleport the player to the new location
         player.teleport(newLocation, PlayerTeleportEvent.TeleportCause.PLUGIN);
@@ -217,23 +218,31 @@ public class Jumper extends JavaPlugin implements Listener {
         player.setVelocity(playerVelocity);
 
         // Play teleport sound at the new location
-        if (getConfigSound()) newLocation.getWorld().playSound(
-                newLocation, Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+        playTeleportSound(newLocation);
 
         // Increase the player's exhaustion
-        double exhaustion = getConfigExhaustionPerMeter() * oldLocation.distance(newLocation);
+        final double exhaustion = getConfigExhaustionPerMeter() * oldLocation.distance(newLocation);
         if (exhaustion > 0.0) player.setExhaustion(player.getExhaustion() + (float) exhaustion);
 
         // This will prevent things like snowballs from being thrown
         event.setCancelled(true);
     }
 
+    private void playTeleportSound(final Location location) {
+        if (!getConfigSound()) return;
+
+        final World world = location.getWorld();
+        if (world == null) return;
+
+        world.playSound(location, Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+    }
+
     /**
      * Returns the max teleportation distance [0, server view distance].
      */
     private int getConfigDistanceMax() {
-        int max = Math.max(getConfig().getInt("distance.max"), 0);
-        int serverViewDistance = 16 * getServer().getViewDistance();
+        final int max = Math.max(getConfig().getInt("distance.max"), 0);
+        final int serverViewDistance = 16 * getServer().getViewDistance();
         return (max > 0) ? Math.min(max, serverViewDistance) : serverViewDistance;
     }
 
