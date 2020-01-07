@@ -31,10 +31,16 @@ import java.util.Set;
  */
 public class Jumper extends JavaPlugin implements Listener {
     private final Set<Material> blockMaterialsToIgnore = new HashSet<>(Arrays.asList(
-            Material.AIR, Material.CARPET, Material.DOUBLE_PLANT,
-            Material.FIRE, Material.LADDER, Material.LONG_GRASS,
-            Material.SAPLING, Material.SUGAR_CANE_BLOCK, Material.SNOW,
-            Material.STATIONARY_WATER, Material.TORCH, Material.VINE,
+            Material.AIR,
+//            Material.CARPET,
+            Material.FIRE,
+            Material.LADDER,
+//            Material.SAPLING,
+            Material.SUGAR_CANE,
+            Material.SNOW,
+            Material.TALL_GRASS,
+            Material.TORCH,
+            Material.VINE,
             Material.WATER
     ));
 
@@ -129,6 +135,7 @@ public class Jumper extends JavaPlugin implements Listener {
         if (event.getAction() != Action.RIGHT_CLICK_AIR) return;
 
         // Player must have enough health
+
         double playerHealthPercent = 100.0 * player.getHealth() /
                 player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
         if (playerHealthPercent < getConfigMinHealth()) return;
@@ -198,7 +205,7 @@ public class Jumper extends JavaPlugin implements Listener {
 
         // Play teleport sound at current location
         if (getConfigSound()) oldLocation.getWorld().playSound(
-                oldLocation, Sound.ENTITY_ENDERMEN_TELEPORT, 1.0f, 1.0f);
+                oldLocation, Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
 
         // Get the player's current velocity
         Vector playerVelocity = player.getVelocity();
@@ -211,7 +218,7 @@ public class Jumper extends JavaPlugin implements Listener {
 
         // Play teleport sound at the new location
         if (getConfigSound()) newLocation.getWorld().playSound(
-                newLocation, Sound.ENTITY_ENDERMEN_TELEPORT, 1.0f, 1.0f);
+                newLocation, Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
 
         // Increase the player's exhaustion
         double exhaustion = getConfigExhaustionPerMeter() * oldLocation.distance(newLocation);
